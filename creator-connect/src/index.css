@@ -1,0 +1,127 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #102a43;
+  background-color: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top right, #d8e6ff, #f7fbff 55%);
+}
+
+.auth-card {
+  width: min(420px, 95vw);
+  padding: 1.5rem;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dbe4f3;
+  box-shadow: 0 20px 45px -30px rgba(16, 42, 67, 0.45);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0.5rem 0 1rem;
+  color: #486581;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  border: 1px solid #b8c5d8;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+}
+
+input:focus {
+  outline: 2px solid #2f6fed;
+  outline-offset: 1px;
+  border-color: #2f6fed;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #1f5ed9;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.inline-link {
+  margin: 1rem 0 0;
+  color: #334e68;
+}
+
+.text-button {
+  padding: 0;
+  color: #1f5ed9;
+  background: transparent;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notice {
+  position: fixed;
+  top: 1rem;
+  width: min(420px, 95vw);
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.notice.error {
+  color: #8a1f2d;
+  background: #ffe4e7;
+  border: 1px solid #ffc3cc;
+}
+
+.notice.success {
+  color: #1f5130;
+  background: #dff7e8;
+  border: 1px solid #bce8cc;
+}
