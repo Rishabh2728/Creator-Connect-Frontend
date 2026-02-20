@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import SignupPage from './pages/SignupPage'
 import VerifyOtpPage from './pages/VerifyOtpPage'
 import LoginPage from './pages/LoginPage'
@@ -16,9 +16,35 @@ const PAGE = {
 function App() {
   const [page, setPage] = useState(PAGE.SIGNUP)
   const [pendingEmail, setPendingEmail] = useState('')
+  const [currentUserEmail, setCurrentUserEmail] = useState('')
+  const [currentUserName, setCurrentUserName] = useState('')
   const [authError, setAuthError] = useState('')
   const [authMessage, setAuthMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    const savedProfileRaw = localStorage.getItem('auth_user')
+
+    if (!token) {
+      return
+    }
+
+    try {
+      const savedProfile = savedProfileRaw ? JSON.parse(savedProfileRaw) : null
+      if (savedProfile?.email) {
+        setPendingEmail(savedProfile.email)
+        setCurrentUserEmail(savedProfile.email)
+      }
+      if (savedProfile?.name) {
+        setCurrentUserName(savedProfile.name)
+      }
+    } catch {
+      localStorage.removeItem('auth_user')
+    }
+
+    setPage(PAGE.HOME)
+  }, [])
 
   useEffect(() => {
     axios
@@ -26,6 +52,19 @@ function App() {
       .then((res) => console.log(res.data))
       .catch((err) => console.log(err))
   }, [])
+
+  useEffect(() => {
+    if (!authError && !authMessage) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setAuthError('')
+      setAuthMessage('')
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [authError, authMessage])
 
   const clearNotices = () => {
     setAuthError('')
@@ -89,9 +128,17 @@ function App() {
 
     try {
       const response = await loginUser({ email, password })
-      if (response?.token) {
-        localStorage.setItem('auth_token', response.token)
+      const token = response?.data?.token || response?.token
+      const user = response?.data?.user || response?.user
+      if (token) {
+        localStorage.setItem('auth_token', token)
       }
+      const resolvedEmail = user?.email || email
+      const resolvedName = user?.name || resolvedEmail.split('@')[0]
+      setPendingEmail(resolvedEmail)
+      setCurrentUserEmail(resolvedEmail)
+      setCurrentUserName(resolvedName)
+      localStorage.setItem('auth_user', JSON.stringify({ email: resolvedEmail, name: resolvedName }))
       setAuthMessage('Login successful.')
       setPage(PAGE.HOME)
     } catch (error) {
@@ -103,51 +150,55 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
     setPendingEmail('')
+    setCurrentUserEmail('')
+    setCurrentUserName('')
     clearNotices()
     setPage(PAGE.LOGIN)
   }
 
-  const pageView = useMemo(() => {
-    if (page === PAGE.SIGNUP) {
-      return (
-        <SignupPage
-          onSubmit={handleSignup}
-          onSendOtp={handleSendOtp}
-          onMoveToLogin={() => setPage(PAGE.LOGIN)}
-          loading={isLoading}
-          initialEmail={pendingEmail}
-        />
-      )
-    }
-
-    if (page === PAGE.VERIFY) {
-      return (
-        <VerifyOtpPage
-          email={pendingEmail}
-          onSubmit={handleVerify}
-          onBackToSignup={() => setPage(PAGE.SIGNUP)}
-          loading={isLoading}
-        />
-      )
-    }
-
-    if (page === PAGE.LOGIN) {
-      return (
-        <LoginPage
-          onSubmit={handleLogin}
-          onMoveToSignup={() => setPage(PAGE.SIGNUP)}
-          loading={isLoading}
-          initialEmail={pendingEmail}
-        />
-      )
-    }
-
-    return <HomePage onLogout={handleLogout} />
-  }, [page, isLoading, pendingEmail])
+  let pageView = null
+  if (page === PAGE.SIGNUP) {
+    pageView = (
+      <SignupPage
+        onSubmit={handleSignup}
+        onSendOtp={handleSendOtp}
+        onMoveToLogin={() => setPage(PAGE.LOGIN)}
+        loading={isLoading}
+        initialEmail={pendingEmail}
+      />
+    )
+  } else if (page === PAGE.VERIFY) {
+    pageView = (
+      <VerifyOtpPage
+        email={pendingEmail}
+        onSubmit={handleVerify}
+        onBackToSignup={() => setPage(PAGE.SIGNUP)}
+        loading={isLoading}
+      />
+    )
+  } else if (page === PAGE.LOGIN) {
+    pageView = (
+      <LoginPage
+        onSubmit={handleLogin}
+        onMoveToSignup={() => setPage(PAGE.SIGNUP)}
+        loading={isLoading}
+        initialEmail={pendingEmail}
+      />
+    )
+  } else {
+    pageView = (
+      <HomePage
+        onLogout={handleLogout}
+        userEmail={currentUserEmail || pendingEmail}
+        userName={currentUserName}
+      />
+    )
+  }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${page === PAGE.HOME ? 'app-shell--home' : ''}`.trim()}>
       {authError && <p className="notice error">{authError}</p>}
       {authMessage && !authError && <p className="notice success">{authMessage}</p>}
       {pageView}

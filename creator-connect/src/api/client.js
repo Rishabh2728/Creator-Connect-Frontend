@@ -1,11 +1,14 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export async function apiRequest(path, options = {}) {
+  const isFormDataBody = options.body instanceof FormData
+  const defaultHeaders = isFormDataBody ? {} : { 'Content-Type': 'application/json' }
+
   let response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
-        'Content-Type': 'application/json',
+        ...defaultHeaders,
         ...(options.headers || {}),
       },
       ...options,

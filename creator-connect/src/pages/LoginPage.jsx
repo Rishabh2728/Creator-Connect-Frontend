@@ -18,7 +18,7 @@ function LoginPage({ onSubmit, onMoveToSignup, loading, initialEmail = '' }) {
   }
 
   return (
-    <AuthCard title="Log in" subtitle="Use your verified account credentials to continue.">
+    <AuthCard title="Log in">
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input
