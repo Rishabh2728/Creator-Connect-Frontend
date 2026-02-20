@@ -18,7 +18,7 @@ function LoginPage({ onSubmit, onMoveToSignup, loading, initialEmail = '' }) {
   }
 
   return (
-    <AuthCard title="Log in">
+    <AuthCard title="Log in"> <br></br>
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input
