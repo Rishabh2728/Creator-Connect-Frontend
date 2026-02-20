@@ -1,5 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { createAsset, deleteAssetById, getMyAssets, getPublicAssets } from '../api/assetApi'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { createAsset, deleteAssetById } from '../api/assetApi'
+import {
+  clearLoadingError,
+  fetchAssetsData,
+  prependCreatedAsset,
+  removeAssetOptimistic,
+  resetAssetsState,
+  restoreAssetsState,
+  setActiveTab,
+  setLoadingError,
+} from '../store/slices/assetSlice'
 
 const ALLOWED_FILE_TYPES = [
   'image/png',
@@ -14,16 +25,14 @@ const ALLOWED_FILE_TYPES = [
 const isImageType = (type = '') => type.startsWith('image/')
 
 function HomePage({ onLogout, userEmail, userName }) {
-  const [activeTab, setActiveTab] = useState('home')
+  const dispatch = useDispatch()
+  const { activeTab, publicAssets, myAssets, loadingError, hasLoaded } = useSelector((state) => state.asset)
   const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploadError, setUploadError] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [publicAssets, setPublicAssets] = useState([])
-  const [myAssets, setMyAssets] = useState([])
-  const [loadingError, setLoadingError] = useState('')
   const [previewAsset, setPreviewAsset] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
   const fileInputRef = useRef(null)
@@ -41,19 +50,16 @@ function HomePage({ onLogout, userEmail, userName }) {
   }, [toast.message])
 
   useEffect(() => {
-    const fetchAssets = async () => {
-      setLoadingError('')
-      try {
-        const [publicResponse, myResponse] = await Promise.all([getPublicAssets(), getMyAssets()])
-        setPublicAssets(publicResponse?.data || [])
-        setMyAssets(myResponse?.data || [])
-      } catch (error) {
-        setLoadingError(error.message || 'Could not load assets')
-      }
+    if (!hasLoaded) {
+      dispatch(fetchAssetsData())
     }
+  }, [dispatch, hasLoaded])
 
-    fetchAssets()
-  }, [])
+  useEffect(() => {
+    if (!userEmail) {
+      dispatch(resetAssetsState())
+    }
+  }, [dispatch, userEmail])
 
   const currentName = userName?.trim() || (userEmail ? userEmail.split('@')[0] : 'User')
 
@@ -86,10 +92,7 @@ function HomePage({ onLogout, userEmail, userName }) {
 
       const createdAsset = response?.data
       if (createdAsset) {
-        setMyAssets((prev) => [createdAsset, ...prev])
-        if (createdAsset.visibility === 'public') {
-          setPublicAssets((prev) => [createdAsset, ...prev])
-        }
+        dispatch(prependCreatedAsset(createdAsset))
       }
 
       setToast({
@@ -117,13 +120,12 @@ function HomePage({ onLogout, userEmail, userName }) {
     }
   }
 
-  const handleDeleteAsset = async (assetId) => {
+  const handleDeleteAsset = useCallback(async (assetId) => {
     const previousMyAssets = myAssets
     const previousPublicAssets = publicAssets
 
-    setLoadingError('')
-    setMyAssets((prev) => prev.filter((asset) => asset.id !== assetId))
-    setPublicAssets((prev) => prev.filter((asset) => asset.id !== assetId))
+    dispatch(clearLoadingError())
+    dispatch(removeAssetOptimistic(assetId))
 
     try {
       const response = await deleteAssetById(assetId)
@@ -132,34 +134,61 @@ function HomePage({ onLogout, userEmail, userName }) {
         type: 'success',
       })
     } catch (error) {
-      setMyAssets(previousMyAssets)
-      setPublicAssets(previousPublicAssets)
+      dispatch(
+        restoreAssetsState({
+          myAssets: previousMyAssets,
+          publicAssets: previousPublicAssets,
+        }),
+      )
       const deleteMessage = error.message || 'Could not delete asset'
-      setLoadingError(deleteMessage)
+      dispatch(setLoadingError(deleteMessage))
       setToast({ message: deleteMessage, type: 'error' })
     }
-  }
+  }, [dispatch, myAssets, publicAssets])
 
-  const renderAssetCard = (asset, isOwned = false) => (
-    <article key={asset.id} className="asset-card" role="listitem">
-      <button type="button" className="asset-preview" onClick={() => setPreviewAsset(asset)}>
-        {isImageType(asset.mimeType) ? (
-          <img src={asset.fileUrl} alt={asset.title} />
-        ) : (
-          <video src={asset.fileUrl} muted playsInline />
-        )}
-      </button>
-      <div className="asset-card-body">
-        <p className="asset-name">{asset.title}</p>
-        <p className="asset-uploader">Uploaded by: {asset.ownerName || 'Unknown'}</p>
-        <span className={`asset-badge ${asset.visibility}`}>{asset.visibility}</span>
-        {isOwned && (
-          <button type="button" className="delete-asset-button" onClick={() => handleDeleteAsset(asset.id)}>
-            Delete
+  const publicAssetCards = useMemo(
+    () =>
+      publicAssets.map((asset) => (
+        <article key={asset.id} className="asset-card" role="listitem">
+          <button type="button" className="asset-preview" onClick={() => setPreviewAsset(asset)}>
+            {isImageType(asset.mimeType) ? (
+              <img src={asset.fileUrl} alt={asset.title} />
+            ) : (
+              <video src={asset.fileUrl} muted playsInline />
+            )}
           </button>
-        )}
-      </div>
-    </article>
+          <div className="asset-card-body">
+            <p className="asset-name">{asset.title}</p>
+            <p className="asset-uploader">Uploaded by: {asset.ownerName || 'Unknown'}</p>
+            <span className={`asset-badge ${asset.visibility}`}>{asset.visibility}</span>
+          </div>
+        </article>
+      )),
+    [publicAssets],
+  )
+
+  const myAssetCards = useMemo(
+    () =>
+      myAssets.map((asset) => (
+        <article key={asset.id} className="asset-card" role="listitem">
+          <button type="button" className="asset-preview" onClick={() => setPreviewAsset(asset)}>
+            {isImageType(asset.mimeType) ? (
+              <img src={asset.fileUrl} alt={asset.title} />
+            ) : (
+              <video src={asset.fileUrl} muted playsInline />
+            )}
+          </button>
+          <div className="asset-card-body">
+            <p className="asset-name">{asset.title}</p>
+            <p className="asset-uploader">Uploaded by: {asset.ownerName || 'Unknown'}</p>
+            <span className={`asset-badge ${asset.visibility}`}>{asset.visibility}</span>
+            <button type="button" className="delete-asset-button" onClick={() => handleDeleteAsset(asset.id)}>
+              Delete
+            </button>
+          </div>
+        </article>
+      )),
+    [myAssets, handleDeleteAsset],
   )
 
   return (
@@ -178,21 +207,21 @@ function HomePage({ onLogout, userEmail, userName }) {
           <button
             type="button"
             className={`nav-link ${activeTab === 'home' ? 'active' : ''}`}
-            onClick={() => setActiveTab('home')}
+            onClick={() => dispatch(setActiveTab('home'))}
           >
             Home
           </button>
           <button
             type="button"
             className={`nav-link ${activeTab === 'create' ? 'active' : ''}`}
-            onClick={() => setActiveTab('create')}
+            onClick={() => dispatch(setActiveTab('create'))}
           >
             Create Asset
           </button>
           <button
             type="button"
             className={`nav-link ${activeTab === 'myassets' ? 'active' : ''}`}
-            onClick={() => setActiveTab('myassets')}
+            onClick={() => dispatch(setActiveTab('myassets'))}
           >
             My Assets
           </button>
@@ -205,15 +234,13 @@ function HomePage({ onLogout, userEmail, userName }) {
 
       <main className="home-content">
         {loadingError && <p className="upload-error">{loadingError}</p>}
-        {activeTab === 'home' && (
-          <section className="content-card">
-            <h2>All Public Assets</h2>
-            {!publicAssets.length && <p className="empty-state">No public assets available yet.</p>}
-            <div className="asset-grid" role="list">
-              {publicAssets.map((asset) => renderAssetCard(asset))}
-            </div>
-          </section>
-        )}
+        <section className={`content-card ${activeTab === 'home' ? '' : 'section-hidden'}`}>
+          <h2>All Public Assets</h2>
+          {!publicAssets.length && <p className="empty-state">No public assets available yet.</p>}
+          <div className="asset-grid" role="list">
+            {publicAssetCards}
+          </div>
+        </section>
 
         {activeTab === 'create' && (
           <section className="content-card">
@@ -269,15 +296,13 @@ function HomePage({ onLogout, userEmail, userName }) {
           </section>
         )}
 
-        {activeTab === 'myassets' && (
-          <section className="content-card">
-            <h2>My Assets</h2>
-            {!myAssets.length && <p className="empty-state">You have not uploaded any assets yet.</p>}
-            <div className="asset-grid" role="list">
-              {myAssets.map((asset) => renderAssetCard(asset, true))}
-            </div>
-          </section>
-        )}
+        <section className={`content-card ${activeTab === 'myassets' ? '' : 'section-hidden'}`}>
+          <h2>My Assets</h2>
+          {!myAssets.length && <p className="empty-state">You have not uploaded any assets yet.</p>}
+          <div className="asset-grid" role="list">
+            {myAssetCards}
+          </div>
+        </section>
       </main>
 
       {previewAsset && (

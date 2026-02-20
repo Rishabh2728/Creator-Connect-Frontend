@@ -247,6 +247,10 @@ button[disabled] {
   padding: 1rem;
 }
 
+.section-hidden {
+  display: none;
+}
+
 .upload-form {
   display: grid;
   gap: 0.8rem;

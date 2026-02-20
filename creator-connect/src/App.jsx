@@ -1,10 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import SignupPage from './pages/SignupPage'
 import VerifyOtpPage from './pages/VerifyOtpPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import { sendSignupOtp, signupUser, verifySignupOtp, loginUser } from './api/authApi'
 import axios from 'axios'
+import {
+  clearNotices,
+  resetAuthState,
+  setAuthError,
+  setAuthMessage,
+  setCurrentUser,
+  setIsLoading,
+  setPage,
+  setPendingEmail,
+} from './store/slices/authSlice'
+import { resetAssetsState } from './store/slices/assetSlice'
 
 const PAGE = {
   SIGNUP: 'signup',
@@ -14,37 +26,10 @@ const PAGE = {
 }
 
 function App() {
-  const [page, setPage] = useState(PAGE.SIGNUP)
-  const [pendingEmail, setPendingEmail] = useState('')
-  const [currentUserEmail, setCurrentUserEmail] = useState('')
-  const [currentUserName, setCurrentUserName] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [authMessage, setAuthMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    const savedProfileRaw = localStorage.getItem('auth_user')
-
-    if (!token) {
-      return
-    }
-
-    try {
-      const savedProfile = savedProfileRaw ? JSON.parse(savedProfileRaw) : null
-      if (savedProfile?.email) {
-        setPendingEmail(savedProfile.email)
-        setCurrentUserEmail(savedProfile.email)
-      }
-      if (savedProfile?.name) {
-        setCurrentUserName(savedProfile.name)
-      }
-    } catch {
-      localStorage.removeItem('auth_user')
-    }
-
-    setPage(PAGE.HOME)
-  }, [])
+  const dispatch = useDispatch()
+  const { page, pendingEmail, currentUserEmail, currentUserName, authError, authMessage, isLoading } = useSelector(
+    (state) => state.auth,
+  )
 
   useEffect(() => {
     axios
@@ -59,72 +44,66 @@ function App() {
     }
 
     const timer = setTimeout(() => {
-      setAuthError('')
-      setAuthMessage('')
+      dispatch(clearNotices())
     }, 3000)
 
     return () => clearTimeout(timer)
-  }, [authError, authMessage])
-
-  const clearNotices = () => {
-    setAuthError('')
-    setAuthMessage('')
-  }
+  }, [dispatch, authError, authMessage])
 
   const handleSendOtp = async ({ email }) => {
-    clearNotices()
-    setIsLoading(true)
+    dispatch(clearNotices())
+    dispatch(setIsLoading(true))
 
     try {
       const response = await sendSignupOtp({ email })
-      setPendingEmail(email)
-      setAuthMessage(response?.message || 'OTP sent to your email.')
+      dispatch(setPendingEmail(email))
+      dispatch(setAuthMessage(response?.message || 'OTP sent to your email.'))
     } catch (error) {
-      setAuthError(error.message || 'Could not send OTP. Please try again.')
+      dispatch(setAuthError(error.message || 'Could not send OTP. Please try again.'))
     } finally {
-      setIsLoading(false)
+      dispatch(setIsLoading(false))
     }
   }
 
   const handleSignup = async ({ name, email, password, otp }) => {
-    clearNotices()
-    setIsLoading(true)
+    dispatch(clearNotices())
+    dispatch(setIsLoading(true))
 
     try {
       const response = await signupUser({ name, email, password, otp })
-      setPendingEmail(email)
+      dispatch(setPendingEmail(email))
       if (response?.requiresOtpVerification) {
-        setAuthMessage(response?.message || 'OTP sent to your email. Verify to continue.')
-        setPage(PAGE.VERIFY)
+        dispatch(setAuthMessage(response?.message || 'OTP sent to your email. Verify to continue.'))
+        dispatch(setPage(PAGE.VERIFY))
       } else {
-        setAuthMessage(response?.message || 'Signup successful. You can log in now.')
-        setPage(PAGE.LOGIN)
+        dispatch(setAuthMessage(response?.message || 'Signup successful. You can log in now.'))
+        dispatch(setPage(PAGE.LOGIN))
       }
     } catch (error) {
-      setAuthError(error.message || 'Signup failed. Please try again.')
+      dispatch(setAuthError(error.message || 'Signup failed. Please try again.'))
     } finally {
-      setIsLoading(false)
+      dispatch(setIsLoading(false))
     }
   }
 
   const handleVerify = async ({ otp }) => {
-    clearNotices()
-    setIsLoading(true)
+    dispatch(clearNotices())
+    dispatch(setIsLoading(true))
 
     try {
       const response = await verifySignupOtp({ email: pendingEmail, otp })
-      setAuthMessage(response?.message || 'Email verified. You can log in now.')
-      setPage(PAGE.LOGIN)
+      dispatch(setAuthMessage(response?.message || 'Email verified. You can log in now.'))
+      dispatch(setPage(PAGE.LOGIN))
     } catch (error) {
-      setAuthError(error.message || 'OTP verification failed. Please try again.')
+      dispatch(setAuthError(error.message || 'OTP verification failed. Please try again.'))
     } finally {
-      setIsLoading(false)
+      dispatch(setIsLoading(false))
     }
   }
 
   const handleLogin = async ({ email, password }) => {
-    clearNotices()
-    setIsLoading(true)
+    dispatch(clearNotices())
+    dispatch(setIsLoading(true))
 
     try {
       const response = await loginUser({ email, password })
@@ -135,27 +114,28 @@ function App() {
       }
       const resolvedEmail = user?.email || email
       const resolvedName = user?.name || resolvedEmail.split('@')[0]
-      setPendingEmail(resolvedEmail)
-      setCurrentUserEmail(resolvedEmail)
-      setCurrentUserName(resolvedName)
+      dispatch(setPendingEmail(resolvedEmail))
+      dispatch(
+        setCurrentUser({
+          email: resolvedEmail,
+          name: resolvedName,
+        }),
+      )
       localStorage.setItem('auth_user', JSON.stringify({ email: resolvedEmail, name: resolvedName }))
-      setAuthMessage('Login successful.')
-      setPage(PAGE.HOME)
+      dispatch(setAuthMessage('Login successful.'))
+      dispatch(setPage(PAGE.HOME))
     } catch (error) {
-      setAuthError(error.message || 'Login failed. Please check your credentials.')
+      dispatch(setAuthError(error.message || 'Login failed. Please check your credentials.'))
     } finally {
-      setIsLoading(false)
+      dispatch(setIsLoading(false))
     }
   }
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('auth_user')
-    setPendingEmail('')
-    setCurrentUserEmail('')
-    setCurrentUserName('')
-    clearNotices()
-    setPage(PAGE.LOGIN)
+    dispatch(resetAssetsState())
+    dispatch(resetAuthState())
   }
 
   let pageView = null
@@ -164,7 +144,7 @@ function App() {
       <SignupPage
         onSubmit={handleSignup}
         onSendOtp={handleSendOtp}
-        onMoveToLogin={() => setPage(PAGE.LOGIN)}
+        onMoveToLogin={() => dispatch(setPage(PAGE.LOGIN))}
         loading={isLoading}
         initialEmail={pendingEmail}
       />
@@ -174,7 +154,7 @@ function App() {
       <VerifyOtpPage
         email={pendingEmail}
         onSubmit={handleVerify}
-        onBackToSignup={() => setPage(PAGE.SIGNUP)}
+        onBackToSignup={() => dispatch(setPage(PAGE.SIGNUP))}
         loading={isLoading}
       />
     )
@@ -182,7 +162,7 @@ function App() {
     pageView = (
       <LoginPage
         onSubmit={handleLogin}
-        onMoveToSignup={() => setPage(PAGE.SIGNUP)}
+        onMoveToSignup={() => dispatch(setPage(PAGE.SIGNUP))}
         loading={isLoading}
         initialEmail={pendingEmail}
       />
