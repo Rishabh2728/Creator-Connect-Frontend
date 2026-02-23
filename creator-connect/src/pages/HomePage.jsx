@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { createAsset, deleteAssetById } from '../api/assetApi'
+import ChatInbox from '../components/ChatInbox'
 import {
   clearLoadingError,
   fetchAssetsData,
@@ -27,6 +28,7 @@ const isImageType = (type = '') => type.startsWith('image/')
 function HomePage({ onLogout, userEmail, userName }) {
   const dispatch = useDispatch()
   const { activeTab, publicAssets, myAssets, loadingError, hasLoaded } = useSelector((state) => state.asset)
+  const authToken = useSelector((state) => state.auth.token)
   const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [selectedFile, setSelectedFile] = useState(null)
@@ -34,6 +36,7 @@ function HomePage({ onLogout, userEmail, userName }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [previewAsset, setPreviewAsset] = useState(null)
+  const [inboxTargetUser, setInboxTargetUser] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
   const fileInputRef = useRef(null)
 
@@ -62,6 +65,58 @@ function HomePage({ onLogout, userEmail, userName }) {
   }, [dispatch, userEmail])
 
   const currentName = userName?.trim() || (userEmail ? userEmail.split('@')[0] : 'User')
+  const normalizedCurrentUserEmail = userEmail?.trim().toLowerCase() || ''
+
+  const isOwnAsset = useCallback(
+    (asset) => {
+      const ownerEmail = (asset?.ownerEmail || asset?.owner?.email || '').trim().toLowerCase()
+      return Boolean(ownerEmail && normalizedCurrentUserEmail && ownerEmail === normalizedCurrentUserEmail)
+    },
+    [normalizedCurrentUserEmail],
+  )
+
+  const resolveAssetHost = useCallback((asset) => {
+    const rawId =
+      asset?.ownerId ||
+      asset?.owner?._id ||
+      asset?.owner?.id ||
+      asset?.hostId ||
+      asset?.userId ||
+      asset?.uploaderId ||
+      ''
+    const id = rawId ? String(rawId) : ''
+    const name =
+      asset?.ownerName ||
+      asset?.owner?.name ||
+      asset?.hostName ||
+      asset?.uploaderName ||
+      (asset?.ownerEmail ? asset.ownerEmail.split('@')[0] : '') ||
+      'Unknown User'
+    const email = asset?.ownerEmail || asset?.owner?.email || asset?.hostEmail || asset?.uploaderEmail || ''
+    return { id, name, email }
+  }, [])
+
+  const handleMessageHost = useCallback((asset) => {
+    const ownerEmail = (asset?.ownerEmail || asset?.owner?.email || '').trim().toLowerCase()
+    if (ownerEmail && normalizedCurrentUserEmail && ownerEmail === normalizedCurrentUserEmail) {
+      setToast({
+        message: 'You cannot message yourself for your own asset.',
+        type: 'error',
+      })
+      return
+    }
+
+    const host = resolveAssetHost(asset)
+    if (!host.id) {
+      setToast({
+        message: 'This asset does not include host ID yet. Ask backend to return ownerId in asset payload.',
+        type: 'error',
+      })
+      return
+    }
+    setInboxTargetUser(host)
+    dispatch(setActiveTab('inbox'))
+  }, [dispatch, normalizedCurrentUserEmail, resolveAssetHost])
 
   const handleUpload = async (event) => {
     event.preventDefault()
@@ -148,23 +203,37 @@ function HomePage({ onLogout, userEmail, userName }) {
 
   const publicAssetCards = useMemo(
     () =>
-      publicAssets.map((asset) => (
-        <article key={asset.id} className="asset-card" role="listitem">
-          <button type="button" className="asset-preview" onClick={() => setPreviewAsset(asset)}>
-            {isImageType(asset.mimeType) ? (
-              <img src={asset.fileUrl} alt={asset.title} />
-            ) : (
-              <video src={asset.fileUrl} muted playsInline />
-            )}
-          </button>
-          <div className="asset-card-body">
-            <p className="asset-name">{asset.title}</p>
-            <p className="asset-uploader">Uploaded by: {asset.ownerName || 'Unknown'}</p>
-            <span className={`asset-badge ${asset.visibility}`}>{asset.visibility}</span>
-          </div>
-        </article>
-      )),
-    [publicAssets],
+      publicAssets.map((asset) => {
+        const ownAsset = isOwnAsset(asset)
+        return (
+          <article key={asset.id} className="asset-card" role="listitem">
+            <button type="button" className="asset-preview" onClick={() => setPreviewAsset(asset)}>
+              {isImageType(asset.mimeType) ? (
+                <img src={asset.fileUrl} alt={asset.title} />
+              ) : (
+                <video src={asset.fileUrl} muted playsInline />
+              )}
+            </button>
+            <div className="asset-card-body">
+              <p className="asset-name">{asset.title}</p>
+              <p className="asset-uploader">Uploaded by: {asset.ownerName || 'Unknown'}</p>
+              <div className="asset-action-row">
+                <button
+                  type="button"
+                  className="message-host-button"
+                  onClick={() => handleMessageHost(asset)}
+                  disabled={ownAsset}
+                  title={ownAsset ? 'Disabled for your own post' : 'Message Host'}
+                >
+                  Message Host
+                </button>
+                <span className={`asset-badge ${asset.visibility}`}>{asset.visibility}</span>
+              </div>
+            </div>
+          </article>
+        )
+      }),
+    [publicAssets, handleMessageHost, isOwnAsset],
   )
 
   const myAssetCards = useMemo(
@@ -224,6 +293,13 @@ function HomePage({ onLogout, userEmail, userName }) {
             onClick={() => dispatch(setActiveTab('myassets'))}
           >
             My Assets
+          </button>
+          <button
+            type="button"
+            className={`nav-link ${activeTab === 'inbox' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveTab('inbox'))}
+          >
+            Inbox
           </button>
           <p className="user-label">{currentName}</p>
           <button type="button" className="logout-button" onClick={onLogout}>
@@ -303,6 +379,12 @@ function HomePage({ onLogout, userEmail, userName }) {
             {myAssetCards}
           </div>
         </section>
+
+        {activeTab === 'inbox' && (
+          <section className="content-card">
+            <ChatInbox token={authToken} currentUserEmail={userEmail} initialSelectedUser={inboxTargetUser} />
+          </section>
+        )}
       </main>
 
       {previewAsset && (

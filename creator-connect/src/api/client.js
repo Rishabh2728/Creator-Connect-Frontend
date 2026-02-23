@@ -1,12 +1,42 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const normalizeBaseUrl = (value = '') => value.replace(/\/+$/, '')
+
+const DEFAULT_DEV_API_BASE_URL = 'http://localhost:5000/api'
+const API_BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : '/api'),
+)
+
+export class ApiError extends Error {
+  constructor(message, { status, path, payload } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.path = path
+    this.payload = payload
+  }
+}
+
+const buildErrorMessage = (status, payload, fallback = 'Request failed') => {
+  if (payload?.message) {
+    return payload.message
+  }
+  if (status === 401) {
+    return 'Unauthorized. Please log in again.'
+  }
+  if (status === 404) {
+    return 'Endpoint not found. Check API base URL and backend route.'
+  }
+  return fallback
+}
 
 export async function apiRequest(path, options = {}) {
   const isFormDataBody = options.body instanceof FormData
   const defaultHeaders = isFormDataBody ? {} : { 'Content-Type': 'application/json' }
+  const requestPath = path.startsWith('/') ? path : `/${path}`
+  const requestUrl = `${API_BASE_URL}${requestPath}`
 
   let response
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(requestUrl, {
       headers: {
         ...defaultHeaders,
         ...(options.headers || {}),
@@ -14,7 +44,11 @@ export async function apiRequest(path, options = {}) {
       ...options,
     })
   } catch {
-    throw new Error('Unable to reach backend. Check API server and CORS/proxy config.')
+    throw new ApiError('Unable to reach backend. Check API server, base URL, and CORS/proxy config.', {
+      status: 0,
+      path: requestPath,
+      payload: null,
+    })
   }
 
   let payload = null
@@ -25,8 +59,11 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message = payload?.message || 'Request failed'
-    throw new Error(message)
+    throw new ApiError(buildErrorMessage(response.status, payload), {
+      status: response.status,
+      path: requestPath,
+      payload,
+    })
   }
 
   return payload

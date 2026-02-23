@@ -119,6 +119,7 @@ function App() {
         setCurrentUser({
           email: resolvedEmail,
           name: resolvedName,
+          token,
         }),
       )
       localStorage.setItem('auth_user', JSON.stringify({ email: resolvedEmail, name: resolvedName }))

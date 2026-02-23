@@ -12,6 +12,7 @@ try {
 
 const initialState = {
   page: token ? 'home' : 'signup',
+  token: token || '',
   pendingEmail: savedProfile?.email || '',
   currentUserEmail: savedProfile?.email || '',
   currentUserName: savedProfile?.name || '',
@@ -33,6 +34,7 @@ const authSlice = createSlice({
     setCurrentUser: (state, action) => {
       state.currentUserEmail = action.payload.email || ''
       state.currentUserName = action.payload.name || ''
+      state.token = action.payload.token || state.token
     },
     setAuthError: (state, action) => {
       state.authError = action.payload
@@ -51,6 +53,7 @@ const authSlice = createSlice({
       ...initialState,
       page: 'login',
       pendingEmail: '',
+      token: '',
       currentUserEmail: '',
       currentUserName: '',
       authError: '',
