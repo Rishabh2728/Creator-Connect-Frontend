@@ -27,9 +27,8 @@ const PAGE = {
 
 function App() {
   const dispatch = useDispatch()
-  const { page, pendingEmail, currentUserEmail, currentUserName, authError, authMessage, isLoading } = useSelector(
-    (state) => state.auth,
-  )
+  const { page, pendingEmail, currentUserId, currentUserEmail, currentUserName, authError, authMessage, isLoading } =
+    useSelector((state) => state.auth)
 
   useEffect(() => {
     axios
@@ -114,15 +113,17 @@ function App() {
       }
       const resolvedEmail = user?.email || email
       const resolvedName = user?.name || resolvedEmail.split('@')[0]
+      const resolvedId = user?.id || user?._id || user?.userId || ''
       dispatch(setPendingEmail(resolvedEmail))
       dispatch(
         setCurrentUser({
+          id: resolvedId,
           email: resolvedEmail,
           name: resolvedName,
           token,
         }),
       )
-      localStorage.setItem('auth_user', JSON.stringify({ email: resolvedEmail, name: resolvedName }))
+      localStorage.setItem('auth_user', JSON.stringify({ id: resolvedId, email: resolvedEmail, name: resolvedName }))
       dispatch(setAuthMessage('Login successful.'))
       dispatch(setPage(PAGE.HOME))
     } catch (error) {
@@ -172,6 +173,7 @@ function App() {
     pageView = (
       <HomePage
         onLogout={handleLogout}
+        currentUserId={currentUserId}
         userEmail={currentUserEmail || pendingEmail}
         userName={currentUserName}
       />

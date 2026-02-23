@@ -619,12 +619,21 @@ button[disabled] {
   margin: 0;
   font-size: 1rem;
   color: #4d1023;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .chat-thread-head p {
   margin: 0.1rem 0 0;
   color: #7d3b4f;
   font-size: 0.85rem;
+}
+
+.chat-name-status {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8e5c6a;
 }
 
 .chat-message-list {
@@ -651,6 +660,16 @@ button[disabled] {
   background: #7b2437;
   border-color: #7b2437;
   color: #ffffff;
+}
+
+.chat-message--typing {
+  background: #fcf8fa;
+  border-color: #f0e4e9;
+  color: #8e5c6a;
+}
+
+.chat-message--typing p {
+  font-style: italic;
 }
 
 .chat-message p {

@@ -25,7 +25,7 @@ const ALLOWED_FILE_TYPES = [
 
 const isImageType = (type = '') => type.startsWith('image/')
 
-function HomePage({ onLogout, userEmail, userName }) {
+function HomePage({ onLogout, currentUserId, userEmail, userName }) {
   const dispatch = useDispatch()
   const { activeTab, publicAssets, myAssets, loadingError, hasLoaded } = useSelector((state) => state.asset)
   const authToken = useSelector((state) => state.auth.token)
@@ -382,7 +382,12 @@ function HomePage({ onLogout, userEmail, userName }) {
 
         {activeTab === 'inbox' && (
           <section className="content-card">
-            <ChatInbox token={authToken} currentUserEmail={userEmail} initialSelectedUser={inboxTargetUser} />
+            <ChatInbox
+              token={authToken}
+              currentUserEmail={userEmail}
+              currentUserId={currentUserId}
+              initialSelectedUser={inboxTargetUser}
+            />
           </section>
         )}
       </main>

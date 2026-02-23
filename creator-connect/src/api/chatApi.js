@@ -2,7 +2,7 @@ import { ApiError, apiRequest } from './client'
 
 const CHAT_MESSAGES_URL =
   import.meta.env.VITE_CHAT_MESSAGES_URL ||
-  `${import.meta.env.VITE_API_ORIGIN || 'http://localhost:5000'}/api/chat/messages`
+  `${import.meta.env.VITE_API_ORIGIN || 'https://creator-content-backend-1.onrender.com'}/api/chat/messages`
 
 const getAuthHeaders = (token) => {
   if (!token) return {}

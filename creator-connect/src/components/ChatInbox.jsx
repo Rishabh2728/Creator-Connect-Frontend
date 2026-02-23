@@ -7,6 +7,7 @@ import {
   sendChatMessage,
 } from '../api/chatApi'
 import { ApiError } from '../api/client'
+import useTypingIndicator from '../hooks/useTypingIndicator'
 
 const SOCKET_EVENT = 'chat:message'
 
@@ -70,6 +71,7 @@ const normalizeConversation = (rawConversation = {}) => {
 
   return {
     id: user.id,
+    conversationId: String(rawConversation.conversationId || rawConversation.threadId || ''),
     user,
     lastMessageText,
     updatedAt,
@@ -114,12 +116,12 @@ const resolveSocketUrl = () => {
   const explicitApiOrigin = import.meta.env.VITE_API_ORIGIN
   if (explicitApiOrigin) return explicitApiOrigin
 
-  if (import.meta.env.DEV) return 'http://localhost:5000'
+  if (import.meta.env.DEV) return 'https://creator-content-backend-1.onrender.com'
 
   return window.location.origin
 }
 
-function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
+function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelectedUser = null }) {
   const [conversations, setConversations] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [messages, setMessages] = useState([])
@@ -134,6 +136,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
   const [userSearch, setUserSearch] = useState('')
   const [isSearchingUsers, setIsSearchingUsers] = useState(false)
   const [userResults, setUserResults] = useState([])
+  const [socketInstance, setSocketInstance] = useState(null)
   const endOfMessagesRef = useRef(null)
   const selectedUserRef = useRef(null)
 
@@ -141,6 +144,27 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
   const socketAuthToken = resolvedToken.startsWith('Bearer ') ? resolvedToken : `Bearer ${resolvedToken}`
 
   const selectedConversationTitle = selectedUser?.name || 'Conversation'
+  const currentConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === selectedUser?.id),
+    [conversations, selectedUser],
+  )
+  const activeChat = useMemo(
+    () =>
+      selectedUser
+        ? {
+            id: selectedUser.id,
+            userId: selectedUser.id,
+            receiverId: selectedUser.id,
+            conversationId: currentConversation?.conversationId || null,
+          }
+        : null,
+    [selectedUser, currentConversation?.conversationId],
+  )
+  const { isPeerTyping, handleInputChange, handleInputBlur, handleMessageSent } = useTypingIndicator(
+    socketInstance,
+    activeChat,
+    currentUserId,
+  )
 
   const loadInbox = useCallback(async () => {
     if (!resolvedToken) return
@@ -179,6 +203,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
       const existing = prevConversations.find((entry) => entry.id === user.id)
       const next = {
         id: user.id,
+        conversationId: existing?.conversationId || '',
         user,
         lastMessageText: previewText,
         updatedAt: previewTime,
@@ -191,6 +216,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
 
   const handleSelectUser = (user) => {
     if (!user?.id) return
+    if (selectedUser?.id === user.id) return
     setSelectedUser(user)
     setMessages([])
     setMessagesError('')
@@ -205,6 +231,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
     if (!resolvedToken || !selectedUser?.id || !draftMessage.trim() || isSendingMessage) return
 
     const content = draftMessage.trim()
+    handleMessageSent()
     const optimisticId = `temp-${Date.now()}`
     const optimisticMessage = {
       id: optimisticId,
@@ -273,7 +300,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, isPeerTyping])
 
   useEffect(() => {
     selectedUserRef.current = selectedUser
@@ -288,6 +315,7 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
       auth: { token: socketAuthToken },
       transports: ['polling', 'websocket'],
     })
+    setSocketInstance(socket)
 
     socket.on('connect', () => {
       console.log('socket connected', socket.id)
@@ -333,13 +361,9 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
       socket.off('connect_error')
       socket.off(SOCKET_EVENT)
       socket.disconnect()
+      setSocketInstance(null)
     }
   }, [resolvedToken, socketAuthToken, currentUserEmail, loadInbox])
-
-  const currentConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === selectedUser?.id),
-    [conversations, selectedUser],
-  )
 
   useEffect(() => {
     if (!initialSelectedUser?.id) return
@@ -437,7 +461,10 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
           <>
             <header className="chat-thread-head">
               <div>
-                <h3>{selectedConversationTitle}</h3>
+                <h3>
+                  {selectedConversationTitle}
+                  {isPeerTyping && <span className="chat-name-status">Typing...</span>}
+                </h3>
               </div>
               {currentConversation?.unreadCount > 0 && (
                 <span className="chat-unread-inline">{currentConversation.unreadCount} unread</span>
@@ -464,6 +491,11 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
                   </article>
                 )
               })}
+              {isPeerTyping && (
+                <article className="chat-message chat-message--typing" aria-live="polite">
+                  <p>Typing...</p>
+                </article>
+              )}
               <div ref={endOfMessagesRef} />
             </div>
 
@@ -471,7 +503,12 @@ function ChatInbox({ token, currentUserEmail, initialSelectedUser = null }) {
               <input
                 type="text"
                 value={draftMessage}
-                onChange={(event) => setDraftMessage(event.target.value)}
+                onChange={(event) => {
+                  const nextValue = event.target.value
+                  setDraftMessage(nextValue)
+                  handleInputChange(nextValue)
+                }}
+                onBlur={handleInputBlur}
                 placeholder="Type a message"
               />
               <button type="submit" disabled={isSendingMessage || !draftMessage.trim()}>
