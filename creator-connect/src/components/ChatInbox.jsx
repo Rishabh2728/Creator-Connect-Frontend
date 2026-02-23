@@ -473,8 +473,13 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
                 className="chat-mobile-toggle"
                 onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
                 aria-expanded={isMobileSidebarOpen}
+                aria-label="Toggle inbox conversations"
               >
-                {isMobileSidebarOpen ? 'Hide chats' : 'Chats'}
+                <span className="chat-mobile-toggle-icon" aria-hidden="true">
+                  {isMobileSidebarOpen ? '≡' : '☰'}
+                </span>
+                <span className="chat-mobile-toggle-name">{selectedConversationTitle}</span>
+                {isPeerTyping && <span className="chat-mobile-toggle-status">Typing...</span>}
               </button>
               {currentConversation?.unreadCount > 0 && (
                 <span className="chat-unread-inline">{currentConversation.unreadCount} unread</span>

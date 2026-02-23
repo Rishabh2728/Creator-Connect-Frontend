@@ -656,12 +656,33 @@ button[disabled] {
 
 .chat-mobile-toggle {
   display: none;
-  white-space: nowrap;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.32rem 0.56rem;
   font-size: 0.78rem;
   border: 1px solid #d7b7c2;
   background: #ffffff;
   color: #7b2437;
+  max-width: 62%;
+}
+
+.chat-mobile-toggle-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.chat-mobile-toggle-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.chat-mobile-toggle-status {
+  font-size: 0.72rem;
+  color: #8e5c6a;
+  white-space: nowrap;
 }
 
 .chat-message-list {
@@ -783,9 +804,16 @@ button[disabled] {
 
   .chat-mobile-toggle {
     display: inline-flex;
+    margin-left: auto;
+    max-width: 72%;
   }
 
-  .chat-name-status {
+  .chat-thread-head h3 {
+    display: none;
+  }
+
+  .chat-name-status,
+  .chat-unread-inline {
     display: none;
   }
 
