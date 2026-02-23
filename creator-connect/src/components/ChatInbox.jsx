@@ -137,6 +137,7 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
   const [isSearchingUsers, setIsSearchingUsers] = useState(false)
   const [userResults, setUserResults] = useState([])
   const [socketInstance, setSocketInstance] = useState(null)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(true)
   const endOfMessagesRef = useRef(null)
   const selectedUserRef = useRef(null)
 
@@ -218,6 +219,7 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
     if (!user?.id) return
     if (selectedUser?.id === user.id) return
     setSelectedUser(user)
+    setIsMobileSidebarOpen(false)
     setMessages([])
     setMessagesError('')
     setIsPickerOpen(false)
@@ -390,7 +392,7 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
 
   return (
     <section className="chat-inbox-wrap">
-      <aside className="chat-sidebar">
+      <aside className={`chat-sidebar ${isMobileSidebarOpen ? 'open' : ''}`}>
         <div className="chat-sidebar-head">
           <h2>Inbox</h2>
           <button type="button" className="nav-link chat-new-chat-btn" onClick={() => setIsPickerOpen((prev) => !prev)}>
@@ -466,6 +468,14 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
                   {isPeerTyping && <span className="chat-name-status">Typing...</span>}
                 </h3>
               </div>
+              <button
+                type="button"
+                className="chat-mobile-toggle"
+                onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+                aria-expanded={isMobileSidebarOpen}
+              >
+                {isMobileSidebarOpen ? 'Hide chats' : 'Chats'}
+              </button>
               {currentConversation?.unreadCount > 0 && (
                 <span className="chat-unread-inline">{currentConversation.unreadCount} unread</span>
               )}

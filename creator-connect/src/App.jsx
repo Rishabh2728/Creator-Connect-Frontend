@@ -5,7 +5,6 @@ import VerifyOtpPage from './pages/VerifyOtpPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import { sendSignupOtp, signupUser, verifySignupOtp, loginUser } from './api/authApi'
-import axios from 'axios'
 import {
   clearNotices,
   resetAuthState,
@@ -29,13 +28,6 @@ function App() {
   const dispatch = useDispatch()
   const { page, pendingEmail, currentUserId, currentUserEmail, currentUserName, authError, authMessage, isLoading } =
     useSelector((state) => state.auth)
-
-  useEffect(() => {
-    axios
-      .get('/api/test')
-      .then((res) => console.log(res.data))
-      .catch((err) => console.log(err))
-  }, [])
 
   useEffect(() => {
     if (!authError && !authMessage) {

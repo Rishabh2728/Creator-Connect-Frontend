@@ -201,6 +201,14 @@ button[disabled] {
   font-size: 1.2rem;
 }
 
+.nav-menu-toggle {
+  display: none;
+  background: #ffffff;
+  color: #7b2437;
+  border: 1px solid #d7b7c2;
+  padding: 0.42rem 0.72rem;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
@@ -613,6 +621,11 @@ button[disabled] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.45rem;
+}
+
+.chat-thread-head > div {
+  min-width: 0;
 }
 
 .chat-thread-head h3 {
@@ -622,6 +635,10 @@ button[disabled] {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-thread-head p {
@@ -634,6 +651,17 @@ button[disabled] {
   font-size: 0.78rem;
   font-weight: 500;
   color: #8e5c6a;
+  white-space: nowrap;
+}
+
+.chat-mobile-toggle {
+  display: none;
+  white-space: nowrap;
+  padding: 0.32rem 0.56rem;
+  font-size: 0.78rem;
+  border: 1px solid #d7b7c2;
+  background: #ffffff;
+  color: #7b2437;
 }
 
 .chat-message-list {
@@ -705,22 +733,60 @@ button[disabled] {
 
 @media (max-width: 900px) {
   .top-nav {
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .nav-menu-toggle {
+    display: inline-flex;
   }
 
   .nav-actions {
-    flex-wrap: wrap;
+    display: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ebd8df;
+    margin-top: 0.2rem;
+  }
+
+  .nav-actions.open {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .nav-actions .nav-link,
+  .nav-actions .logout-button,
+  .nav-actions .user-label {
+    width: 100%;
+    justify-self: stretch;
+    text-align: center;
   }
 
   .chat-inbox-wrap {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .chat-sidebar {
     border-right: none;
     border-bottom: 1px solid #e5d5dc;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.22s ease;
+  }
+
+  .chat-sidebar.open {
     max-height: 420px;
+  }
+
+  .chat-mobile-toggle {
+    display: inline-flex;
+  }
+
+  .chat-name-status {
+    display: none;
   }
 
   .chat-thread {

@@ -38,6 +38,7 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
   const [previewAsset, setPreviewAsset] = useState(null)
   const [inboxTargetUser, setInboxTargetUser] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -63,6 +64,10 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
       dispatch(resetAssetsState())
     }
   }, [dispatch, userEmail])
+
+  useEffect(() => {
+    setIsNavMenuOpen(false)
+  }, [activeTab])
 
   const currentName = userName?.trim() || (userEmail ? userEmail.split('@')[0] : 'User')
   const normalizedCurrentUserEmail = userEmail?.trim().toLowerCase() || ''
@@ -272,32 +277,53 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
       )}
       <nav className="top-nav">
         <h1>Creator Connect</h1>
-        <div className="nav-actions">
+        <button
+          type="button"
+          className="nav-menu-toggle"
+          onClick={() => setIsNavMenuOpen((prev) => !prev)}
+          aria-expanded={isNavMenuOpen}
+          aria-controls="home-nav-actions"
+        >
+          {isNavMenuOpen ? 'Close' : 'Menu'}
+        </button>
+        <div id="home-nav-actions" className={`nav-actions ${isNavMenuOpen ? 'open' : ''}`}>
           <button
             type="button"
             className={`nav-link ${activeTab === 'home' ? 'active' : ''}`}
-            onClick={() => dispatch(setActiveTab('home'))}
+            onClick={() => {
+              dispatch(setActiveTab('home'))
+              setIsNavMenuOpen(false)
+            }}
           >
             Home
           </button>
           <button
             type="button"
             className={`nav-link ${activeTab === 'create' ? 'active' : ''}`}
-            onClick={() => dispatch(setActiveTab('create'))}
+            onClick={() => {
+              dispatch(setActiveTab('create'))
+              setIsNavMenuOpen(false)
+            }}
           >
             Create Asset
           </button>
           <button
             type="button"
             className={`nav-link ${activeTab === 'myassets' ? 'active' : ''}`}
-            onClick={() => dispatch(setActiveTab('myassets'))}
+            onClick={() => {
+              dispatch(setActiveTab('myassets'))
+              setIsNavMenuOpen(false)
+            }}
           >
             My Assets
           </button>
           <button
             type="button"
             className={`nav-link ${activeTab === 'inbox' ? 'active' : ''}`}
-            onClick={() => dispatch(setActiveTab('inbox'))}
+            onClick={() => {
+              dispatch(setActiveTab('inbox'))
+              setIsNavMenuOpen(false)
+            }}
           >
             Inbox
           </button>
