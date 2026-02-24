@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { createAsset, deleteAssetById } from '../api/assetApi'
+import { getCoinWallet } from '../api/coinsApi'
 import ChatInbox from '../components/ChatInbox'
+import CoinPlansPage from '../components/CoinPlansPage'
 import {
   clearLoadingError,
   fetchAssetsData,
@@ -39,6 +41,9 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
   const [inboxTargetUser, setInboxTargetUser] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false)
+  const [coinBalance, setCoinBalance] = useState(0)
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false)
+  const [walletError, setWalletError] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -68,6 +73,51 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
   useEffect(() => {
     setIsNavMenuOpen(false)
   }, [activeTab])
+
+  const loadWallet = useCallback(async () => {
+    if (!authToken) return
+    setIsLoadingWallet(true)
+    setWalletError('')
+    try {
+      const response = await getCoinWallet(authToken)
+      const wallet = response?.data?.wallet || response?.wallet || response?.data || {}
+      const nextCoinBalance = Number(wallet.remainingCoins ?? wallet.coins ?? wallet.balance)
+      if (Number.isFinite(nextCoinBalance)) {
+        setCoinBalance(nextCoinBalance)
+      }
+    } catch (error) {
+      setWalletError(error?.message || 'Could not load wallet')
+    } finally {
+      setIsLoadingWallet(false)
+    }
+  }, [authToken])
+
+  useEffect(() => {
+    loadWallet()
+  }, [loadWallet])
+
+  useEffect(() => {
+    if (!authToken) return undefined
+
+    const intervalId = setInterval(() => {
+      loadWallet()
+    }, 15000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadWallet()
+      }
+    }
+
+    window.addEventListener('focus', loadWallet)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('focus', loadWallet)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [authToken, loadWallet])
 
   const currentName = userName?.trim() || (userEmail ? userEmail.split('@')[0] : 'User')
   const normalizedCurrentUserEmail = userEmail?.trim().toLowerCase() || ''
@@ -319,6 +369,30 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
           </button>
           <button
             type="button"
+            className={`nav-link ${activeTab === 'plans' ? 'active' : ''}`}
+            onClick={() => {
+              dispatch(setActiveTab('plans'))
+              setIsNavMenuOpen(false)
+            }}
+          >
+            Plans
+          </button>
+          <button
+            type="button"
+            className="coin-nav-pill"
+            onClick={() => {
+              dispatch(setActiveTab('plans'))
+              setIsNavMenuOpen(false)
+            }}
+            title="Open coin plans"
+          >
+            <span className="coin-nav-icon" aria-hidden="true">
+              *
+            </span>
+            {isLoadingWallet ? 'Coins ...' : `Coins ${coinBalance}`}
+          </button>
+          <button
+            type="button"
             className={`nav-link ${activeTab === 'inbox' ? 'active' : ''}`}
             onClick={() => {
               dispatch(setActiveTab('inbox'))
@@ -335,6 +409,7 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
       </nav>
 
       <main className="home-content">
+        {walletError && <p className="upload-error">{walletError}</p>}
         {loadingError && <p className="upload-error">{loadingError}</p>}
         <section className={`content-card ${activeTab === 'home' ? '' : 'section-hidden'}`}>
           <h2>All Public Assets</h2>
@@ -406,6 +481,19 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
           </div>
         </section>
 
+        {activeTab === 'plans' && (
+          <section className="content-card">
+            <CoinPlansPage
+              token={authToken}
+              currentUserEmail={userEmail}
+              currentUserName={userName}
+              coinBalance={coinBalance}
+              onWalletRefresh={loadWallet}
+              onCoinBalanceChange={setCoinBalance}
+            />
+          </section>
+        )}
+
         {activeTab === 'inbox' && (
           <section className="content-card">
             <ChatInbox
@@ -413,6 +501,9 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
               currentUserEmail={userEmail}
               currentUserId={currentUserId}
               initialSelectedUser={inboxTargetUser}
+              coinBalance={coinBalance}
+              onCoinBalanceChange={setCoinBalance}
+              onOpenPlans={() => dispatch(setActiveTab('plans'))}
             />
           </section>
         )}
@@ -438,3 +529,4 @@ function HomePage({ onLogout, currentUserId, userEmail, userName }) {
 }
 
 export default HomePage
+

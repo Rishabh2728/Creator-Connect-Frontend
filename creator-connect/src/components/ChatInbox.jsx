@@ -10,6 +10,7 @@ import { ApiError } from '../api/client'
 import useTypingIndicator from '../hooks/useTypingIndicator'
 
 const SOCKET_EVENT = 'chat:message'
+const COINS_PER_MESSAGE = 1
 
 const toArray = (value) => {
   if (Array.isArray(value)) return value
@@ -105,6 +106,9 @@ const getChatErrorMessage = (error, fallbackMessage) => {
     if (error.status === 404) {
       return 'Chat endpoint not found. Confirm backend chat routes are available.'
     }
+    if (error.status === 402) {
+      return 'Insufficient coins. Buy a plan to continue messaging.'
+    }
   }
   return error?.message || fallbackMessage
 }
@@ -116,12 +120,20 @@ const resolveSocketUrl = () => {
   const explicitApiOrigin = import.meta.env.VITE_API_ORIGIN
   if (explicitApiOrigin) return explicitApiOrigin
 
-  if (import.meta.env.DEV) return 'https://creator-content-backend-1.onrender.com'
+  if (import.meta.env.DEV) return 'http://localhost:5000'
 
   return window.location.origin
 }
 
-function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelectedUser = null }) {
+function ChatInbox({
+  token,
+  currentUserEmail,
+  currentUserId = '',
+  initialSelectedUser = null,
+  coinBalance = 0,
+  onCoinBalanceChange,
+  onOpenPlans,
+}) {
   const [conversations, setConversations] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [messages, setMessages] = useState([])
@@ -145,6 +157,7 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
   const socketAuthToken = resolvedToken.startsWith('Bearer ') ? resolvedToken : `Bearer ${resolvedToken}`
 
   const selectedConversationTitle = selectedUser?.name || 'Conversation'
+  const canSendMessage = coinBalance >= COINS_PER_MESSAGE
   const currentConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedUser?.id),
     [conversations, selectedUser],
@@ -231,6 +244,10 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
   const handleSendMessage = async (event) => {
     event.preventDefault()
     if (!resolvedToken || !selectedUser?.id || !draftMessage.trim() || isSendingMessage) return
+    if (!canSendMessage) {
+      setMessagesError('Insufficient coins. Buy a plan to continue messaging.')
+      return
+    }
 
     const content = draftMessage.trim()
     handleMessageSent()
@@ -256,6 +273,13 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
         receiverId: selectedUser.id,
         body: content,
       })
+      const wallet = response?.data?.wallet || response?.wallet || {}
+      const nextCoinBalance = Number(wallet.remainingCoins ?? wallet.coins ?? wallet.balance)
+      if (Number.isFinite(nextCoinBalance)) {
+        onCoinBalanceChange?.(nextCoinBalance)
+      } else {
+        onCoinBalanceChange?.(Math.max(0, coinBalance - COINS_PER_MESSAGE))
+      }
       const persistedMessage = normalizeMessage(response?.data || response?.message || {})
       setMessages((prevMessages) =>
         prevMessages.map((entry) => (entry.id === optimisticId ? { ...persistedMessage, pending: false } : entry)),
@@ -476,7 +500,7 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
                 aria-label="Toggle inbox conversations"
               >
                 <span className="chat-mobile-toggle-icon" aria-hidden="true">
-                  {isMobileSidebarOpen ? '≡' : '☰'}
+                  {isMobileSidebarOpen ? '=' : '?'}
                 </span>
                 <span className="chat-mobile-toggle-name">{selectedConversationTitle}</span>
                 {isPeerTyping && <span className="chat-mobile-toggle-status">Typing...</span>}
@@ -525,11 +549,20 @@ function ChatInbox({ token, currentUserEmail, currentUserId = '', initialSelecte
                 }}
                 onBlur={handleInputBlur}
                 placeholder="Type a message"
+                disabled={!canSendMessage}
               />
-              <button type="submit" disabled={isSendingMessage || !draftMessage.trim()}>
-                {isSendingMessage ? 'Sending...' : 'Send'}
+              <button type="submit" disabled={isSendingMessage || !draftMessage.trim() || !canSendMessage}>
+                {isSendingMessage ? 'Sending...' : canSendMessage ? 'Send (1 coin)' : 'No Coins'}
               </button>
             </form>
+            {!canSendMessage && (
+              <div className="chat-coin-warning">
+                <span>Coins finished. Buy a plan to continue sending messages.</span>
+                <button type="button" className="chat-coin-warning-btn" onClick={onOpenPlans}>
+                  View Plans
+                </button>
+              </div>
+            )}
           </>
         )}
       </section>

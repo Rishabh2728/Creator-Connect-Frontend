@@ -1,6 +1,6 @@
 const normalizeBaseUrl = (value = '') => value.replace(/\/+$/, '')
 
-const DEFAULT_API_BASE_URL = 'https://creator-content-backend-1.onrender.com/api'
+const DEFAULT_API_BASE_URL = 'http://localhost:5000/api'
 const API_BASE_URL = normalizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL,
 )
@@ -36,12 +36,13 @@ export async function apiRequest(path, options = {}) {
 
   let response
   try {
+    const mergedHeaders = {
+      ...defaultHeaders,
+      ...(options.headers || {}),
+    }
     response = await fetch(requestUrl, {
-      headers: {
-        ...defaultHeaders,
-        ...(options.headers || {}),
-      },
       ...options,
+      headers: mergedHeaders,
     })
   } catch {
     throw new ApiError('Unable to reach backend. Check API server, base URL, and CORS/proxy config.', {

@@ -231,6 +231,24 @@ button[disabled] {
   border-color: #7b2437;
 }
 
+.coin-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid #d7b7c2;
+  background: #fff4f7;
+  color: #7b2437;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.coin-nav-icon {
+  color: #c57a91;
+  font-size: 0.72rem;
+}
+
 .user-label {
   margin: 0 0.2rem;
   padding: 0.3rem 0.55rem;
@@ -477,6 +495,134 @@ button[disabled] {
   border-bottom: 1px solid #ebd8df;
   display: grid;
   gap: 0.55rem;
+}
+
+.coin-wallet-success {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #2f6b44;
+  font-weight: 700;
+}
+
+.coin-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.coin-page-hero {
+  padding: 1rem;
+  border: 1px solid #ecd6de;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #fff5f8 0%, #fffbfc 100%);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.coin-hero-kicker {
+  margin: 0;
+  color: #8b4b5f;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coin-page-hero h2 {
+  margin: 0.25rem 0 0;
+  color: #4d1023;
+}
+
+.coin-hero-copy {
+  margin: 0.4rem 0 0;
+  color: #7d3b4f;
+  font-size: 0.92rem;
+}
+
+.coin-balance-card {
+  min-width: 160px;
+  text-align: right;
+  border: 1px solid #e6c7d2;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0.75rem 0.9rem;
+}
+
+.coin-balance-card p {
+  margin: 0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b4b5f;
+}
+
+.coin-balance-card strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.5rem;
+  color: #7b2437;
+}
+
+.coin-page-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.coin-page-card {
+  border: 1px solid #e8d5dc;
+  border-radius: 12px;
+  padding: 0.95rem;
+  background: #ffffff;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.coin-page-card.featured {
+  border-color: #d59cae;
+  background: linear-gradient(160deg, #fff7fa 0%, #ffffff 65%);
+  box-shadow: 0 12px 26px -24px rgba(77, 16, 35, 0.7);
+}
+
+.coin-page-name {
+  margin: 0;
+  color: #7b2437;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.coin-page-tagline {
+  margin: 0;
+  color: #8b4b5f;
+  font-size: 0.78rem;
+}
+
+.coin-page-price {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #4d1023;
+  font-weight: 700;
+}
+
+.coin-page-total {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #7b2437;
+  font-weight: 700;
+}
+
+.coin-page-breakdown {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7d3b4f;
+}
+
+.coin-page-buy {
+  justify-self: start;
+  margin-top: 0.25rem;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.82rem;
 }
 
 .chat-user-results,
@@ -752,6 +898,29 @@ button[disabled] {
   gap: 0.6rem;
 }
 
+.chat-coin-warning {
+  margin: 0 0.75rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid #f0c8d2;
+  border-radius: 10px;
+  background: #fff4f7;
+  padding: 0.55rem 0.65rem;
+  color: #8a1f2d;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.chat-coin-warning-btn {
+  padding: 0.3rem 0.58rem;
+  font-size: 0.76rem;
+  background: #ffffff;
+  color: #7b2437;
+  border: 1px solid #d8a8b7;
+}
+
 @media (max-width: 900px) {
   .top-nav {
     display: grid;
@@ -779,10 +948,21 @@ button[disabled] {
 
   .nav-actions .nav-link,
   .nav-actions .logout-button,
-  .nav-actions .user-label {
+  .nav-actions .user-label,
+  .nav-actions .coin-nav-pill {
     width: 100%;
     justify-self: stretch;
     text-align: center;
+  }
+
+  .coin-page-hero {
+    display: grid;
+    align-items: start;
+  }
+
+  .coin-balance-card {
+    min-width: 0;
+    text-align: left;
   }
 
   .chat-inbox-wrap {
